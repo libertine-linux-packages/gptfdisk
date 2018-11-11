@@ -28,11 +28,15 @@ depends build_busybox
 depends build_netbsd_src_sleep
 build_needs sh env expr ls sleep install
 
+depends build_libuuid
+
+depends build_popt
+
 case "$package" in
 	
 	build_gptfdisk)
 	
-		build_provides gptfdisk ndisasm
+		build_provides sgdisk
 
 		depends build_musl_cross_make_build
 		build_needs "$libertine_build"-cc "$libertine_build"-gcc "$libertine_build"-ar "$libertine_build"-ld "$libertine_build"-ranlib
@@ -60,8 +64,7 @@ case "$package" in
 	
 esac
 
-
-build_needs mkdir cp ln
+build_needs mkdir cp
 _libertine_compile_gptfdisk_internal()
 {
 	local destinationSysrootPath="$1"
@@ -74,21 +77,23 @@ _libertine_compile_gptfdisk_internal()
 	local outputBinFolderPath="$destinationSysrootPath"/usr/bin
 	mkdir -m 0755 -p "$outputBinFolderPath"
 	
-	# Needs libuuid
+	# Needs libuuid - so will need build_libuuid
 	# Needs ncurses for cgdisk
-	# Needs popt for sgdisk
+	# Needs popt for sgdisk - part of rpm5.org/files/popt/
 	
-	# The result should be program files called gdisk, cgdisk, sgdisk,and fixparts. Typing "make gdisk", "make cgdisk", "make sgdisk", or "makefixparts" will compile only the requested programs
+	# The result should be program files called gdisk, cgdisk, sgdisk,and fixparts. Typing "make gdisk", "make cgdisk", "make sgdisk", or "make fixparts" will compile only the requested programs
 	
 	pushd "$(libertine_public_sourcePath)"
 		
-		libertine_public_make CC="$cCompiler" CFLAGS="$cFlags" CXX="$cxxCompiler" CXXFLAGS="$cxxFlags"
+		libertine_public_populateInputSysroot build_libuuid build_popt
+	
+		libertine_public_make sgdisk CC="$cCompiler" CFLAGS="$cFlags" CXX="$cxxCompiler" CXXFLAGS="$cxxFlags"
 		
 	popd
 	
-	cp "$(libertine_public_sourcePath)"/src/xxd/xxd "$outputBinFolderPath"
+	cp "$(libertine_public_sourcePath)"/sgdisk "$outputBinFolderPath"
 	
 	if $isForInitramfsSysroot; then
-		libertine_public_stripAndSecureBinary "$outputBinFolderPath"/xxd
+		libertine_public_stripAndSecureBinary "$outputBinFolderPath"/sgdisk
 	fi
 }

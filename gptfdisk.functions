@@ -1,0 +1,94 @@
+# This file is part of libertine linux's package gptfdisk. It is subject to the license terms in the COPYRIGHT file found in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/gptfdisk/master/COPYRIGHT. No part of libertine linux's package gptfdisk, including this file, may be copied, modified, propagated, or distributed except according to the terms contained in the COPYRIGHT file.
+# Copyright © 2018 The developers of libertine linux's package gptfdisk. See the COPYRIGHT file in the top-level directory of this distribution and at https://raw.githubusercontent.com/libertine-linux-packages/gptfdisk/master/COPYRIGHT.
+
+
+variant=upstream
+
+depends build_ccache
+build_needs ccache
+
+depends build_gnumake
+build_needs make
+
+depends build_perl
+build_needs perl
+
+depends build_gnuconfig
+
+depends build_autoconf
+build_needs autoconf autoheader autom4te autoreconf autoscan autoupdate ifnames
+
+depends build_automake
+build_needs automake aclocal
+
+depends build_gnum4
+build_needs m4
+
+depends build_busybox
+depends build_netbsd_src_sleep
+build_needs sh env expr ls sleep install
+
+case "$package" in
+	
+	build_gptfdisk)
+	
+		build_provides gptfdisk ndisasm
+
+		depends build_musl_cross_make_build
+		build_needs "$libertine_build"-cc "$libertine_build"-gcc "$libertine_build"-ar "$libertine_build"-ld "$libertine_build"-ranlib
+		
+		libertine_compile_build_gptfdisk()
+		{
+			_libertine_compile_gptfdisk_internal "$(libertine_public_outputBuildSysrootPath)" false "$libertine_build"-cc "$(libertine_public_buildCCompilerFlags)" "$libertine_build"-c++ "$(libertine_public_buildCxxCompilerFlags)"
+		}
+	
+	;;
+	
+	gptfdisk)
+
+		depends build_musl_cross_make_host
+		build_needs "$libertine_host"-cc "$libertine_host"-gcc "$libertine_host"-ar "$libertine_host"-ld "$libertine_host"-ranlib "$libertine_host"-strip
+		
+		depends build_paxctl
+		build_needs paxctl
+				
+		libertine_compile_gptfdisk()
+		{
+			_libertine_compile_gptfdisk_internal "$(libertine_public_outputHostSysrootPath)" true "$libertine_host"-cc "$(libertine_public_hostCCompilerFlags)" "$libertine_host"-c++ "$(libertine_public_hostCxxCompilerFlags)"
+		}
+	;;
+	
+esac
+
+
+build_needs mkdir cp ln
+_libertine_compile_gptfdisk_internal()
+{
+	local destinationSysrootPath="$1"
+	local isForInitramfsSysroot="$2"
+	local cCompiler="$3"
+	local cFlags="$4"
+	local cxxCompiler="$5"
+	local cxxFlags="$6"
+	
+	local outputBinFolderPath="$destinationSysrootPath"/usr/bin
+	mkdir -m 0755 -p "$outputBinFolderPath"
+	
+	# Needs libuuid
+	# Needs ncurses for cgdisk
+	# Needs popt for sgdisk
+	
+	# The result should be program files called gdisk, cgdisk, sgdisk,and fixparts. Typing "make gdisk", "make cgdisk", "make sgdisk", or "makefixparts" will compile only the requested programs
+	
+	pushd "$(libertine_public_sourcePath)"
+		
+		libertine_public_make CC="$cCompiler" CFLAGS="$cFlags" CXX="$cxxCompiler" CXXFLAGS="$cxxFlags"
+		
+	popd
+	
+	cp "$(libertine_public_sourcePath)"/src/xxd/xxd "$outputBinFolderPath"
+	
+	if $isForInitramfsSysroot; then
+		libertine_public_stripAndSecureBinary "$outputBinFolderPath"/xxd
+	fi
+}
